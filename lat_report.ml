@@ -7,11 +7,14 @@ open Lwt
 open Lat_t
 
 let make_html_report stats =
-  let subject = "Backend performance over the last 24 hours" in
+  let subject = "API latency over the last 24 hours" in
   let buf = Buffer.create 1000 in
   bprintf buf "\
 <table>
-<tr><th>Operation</th><th>Mean latency (s)</th><th>Count</th></tr>
+<tr>
+  <td><b>Operation</b></td>
+  <td><b>Latency (mean, seconds)</b></td>
+  <td><b>Count</b></td></tr>
 ";
   List.iter (fun x ->
     bprintf buf "
@@ -32,10 +35,36 @@ let make_html_report stats =
   let body = Buffer.contents buf in
   subject, body
 
+let make_text_report stats =
+  let buf = Buffer.create 1000 in
+  bprintf buf "%-45s%-25s%s\n"
+    "Operation"
+    "Latency (mean, seconds)"
+    "Count";
+  List.iter (fun x ->
+    bprintf buf "%-45s%-25.3f%i\n"
+      x.metric_name
+      x.metric_mean
+      x.metric_count
+  ) stats;
+  Buffer.contents buf
+
+let get_html_report () =
+  Lat_acc.get_recent 86400. >>= fun stats ->
+  return (make_html_report stats)
+
+let get_text_report () =
+  Lat_acc.get_recent 86400. >>= fun stats ->
+  return (make_text_report stats)
+
+let print_text_report () =
+  get_text_report () >>= fun report ->
+  print_string report;
+  return ()
+
 let send_daily_report () =
   Lat_acc.cleanup () >>= fun () ->
-  Lat_acc.get_recent 86400. >>= fun stats ->
-  let subject, html_body = make_html_report stats in
+  get_html_report () >>= fun (subject, html_body) ->
   let alerts_addr =
     let conf = Conf.get () in
     Email.of_string conf.Conf_t.developer_email

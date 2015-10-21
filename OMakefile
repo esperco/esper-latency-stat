@@ -1,0 +1,19 @@
+OCAML_LIBS = $(OCAML_LIBS_latency-stat)
+
+FILES[] =
+  lat_t
+  lat_j
+  lat_v
+  lat_access
+  lat_acc
+  lat_report
+
+Atdgen(lat, -j-std -j-strict-fields -j-defaults)
+OCamlLibrary(latency-stat, $(FILES))
+Meta(latency-stat)
+
+.DEFAULT: META latency-stat.cma latency-stat.cmxa
+
+.PHONY: clean
+clean:
+  rm -f *.o *.a *.cm* *~ *.annot *.run *.opt META $(ATDGEN_OUTFILES)
