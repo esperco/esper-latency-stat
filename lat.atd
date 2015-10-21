@@ -1,0 +1,9 @@
+type metric = {
+  name: string;
+  count: int;
+  mean: float;
+} <ocaml field_prefix="metric_">
+
+type metric_list = {
+  items: metric list;
+}
