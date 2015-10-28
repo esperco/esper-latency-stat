@@ -6,56 +6,78 @@ open Printf
 open Lwt
 open Lat_t
 
-let make_html_report stats =
-  let subject = "API latency over the last 24 hours" in
-  let buf = Buffer.create 1000 in
+let make_html_table buf title stats =
   bprintf buf "\
+<h1>%s</h1>
 <table>
 <tr>
   <td><b>Operation</b></td>
   <td><b>Latency (mean, seconds)</b></td>
-  <td><b>Count</b></td></tr>
-";
+  <td><b>Count</b></td>
+  <td><b>Total time (seconds)</b></td>
+</tr>
+"
+    (Util_html.encode title);
   List.iter (fun x ->
     bprintf buf "
 <tr>
   <td>%s</td>
   <td>%.3f</td>
   <td>%i</td>
+  <td>%.3f</td>
 </tr>
 "
       (Util_html.encode x.metric_name)
       x.metric_mean
       x.metric_count
+      (float x.metric_count *. x.metric_mean)
   ) stats;
   bprintf buf "
 </tr>
 </table>
-";
+"
+
+let make_html_report stats_sorted_by_latency stats_sorted_by_total_time =
+  let subject = "API latency over the last 24 hours" in
+  let buf = Buffer.create 1000 in
+  make_html_table buf "Sorted by latency" stats_sorted_by_latency;
+  make_html_table buf "Sorted by total time" stats_sorted_by_total_time;
   let body = Buffer.contents buf in
   subject, body
 
-let make_text_report stats =
-  let buf = Buffer.create 1000 in
-  bprintf buf "%-45s%-25s%s\n"
+let make_text_table buf title stats =
+  bprintf buf "--- %s ---\n" title;
+  bprintf buf "%-45s%-25s%-6s%s\n"
     "Operation"
     "Latency (mean, seconds)"
-    "Count";
+    "Count"
+    "Total time (seconds)";
   List.iter (fun x ->
-    bprintf buf "%-45s%-25.3f%i\n"
+    bprintf buf "%-45s%-25.3f%-6i%.3f\n"
       x.metric_name
       x.metric_mean
       x.metric_count
-  ) stats;
+      (float x.metric_count *. x.metric_mean)
+  ) stats
+
+let make_text_report stats_sorted_by_latency stats_sorted_by_total_time =
+  let buf = Buffer.create 1000 in
+  make_text_table buf "Sorted by latency" stats_sorted_by_latency;
+  make_text_table buf "Sorted by total time" stats_sorted_by_total_time;
   Buffer.contents buf
 
+let get_24h_stats () =
+  Lat_acc.get_recent 86400. >>= fun by_latency ->
+  let by_total_time = Lat_acc.sort_by_total_time by_latency in
+  return (by_latency, by_total_time)
+
 let get_html_report () =
-  Lat_acc.get_recent 86400. >>= fun stats ->
-  return (make_html_report stats)
+  get_24h_stats () >>= fun (stats, stats2) ->
+  return (make_html_report stats stats2)
 
 let get_text_report () =
-  Lat_acc.get_recent 86400. >>= fun stats ->
-  return (make_text_report stats)
+  get_24h_stats () >>= fun (stats, stats2) ->
+  return (make_text_report stats stats2)
 
 let print_text_report () =
   get_text_report () >>= fun report ->

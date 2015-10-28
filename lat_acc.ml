@@ -120,6 +120,13 @@ let get_stats_from_agg_tbl tbl =
   in
   List.sort (fun a b -> compare b.metric_mean a.metric_mean) l
 
+let sort_by_total_time l =
+  List.sort (fun a b ->
+    compare
+      (float b.metric_count *. b.metric_mean)
+      (float a.metric_count *. a.metric_mean)
+  ) l
+
 (*
    Aggregate stats collected over the last max_age seconds
    and sort them by decreasing mean.
