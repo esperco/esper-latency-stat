@@ -47,13 +47,13 @@ let make_html_report stats_sorted_by_latency stats_sorted_by_total_time =
 
 let make_text_table buf title stats =
   bprintf buf "--- %s ---\n" title;
-  bprintf buf "%-45s%-25s%-6s%s\n"
+  bprintf buf "%-45s%-14s%-7s%s\n"
     "Operation"
-    "Latency (mean, seconds)"
+    "Mean latency"
     "Count"
-    "Total time (seconds)";
+    "Total time";
   List.iter (fun x ->
-    bprintf buf "%-45s%-25.3f%-6i%.3f\n"
+    bprintf buf "%-45s%-14.3f%-7i%.3f\n"
       x.metric_name
       x.metric_mean
       x.metric_count
