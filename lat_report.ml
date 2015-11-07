@@ -37,8 +37,11 @@ let make_html_table buf title stats =
 </table>
 "
 
-let make_html_report stats_sorted_by_latency stats_sorted_by_total_time =
-  let subject = "API latency over the last 24 hours" in
+let make_html_report
+    period stats_sorted_by_latency stats_sorted_by_total_time =
+  let subject =
+    sprintf "API latency over the last %g hours" (period /. 3600.)
+  in
   let buf = Buffer.create 1000 in
   make_html_table buf "Sorted by latency" stats_sorted_by_latency;
   make_html_table buf "Sorted by total time" stats_sorted_by_total_time;
@@ -66,27 +69,29 @@ let make_text_report stats_sorted_by_latency stats_sorted_by_total_time =
   make_text_table buf "Sorted by total time" stats_sorted_by_total_time;
   Buffer.contents buf
 
-let get_24h_stats () =
-  Lat_acc.get_recent 86400. >>= fun by_latency ->
+let get_stats period =
+  Lat_acc.get_recent period >>= fun by_latency ->
   let by_total_time = Lat_acc.sort_by_total_time by_latency in
   return (by_latency, by_total_time)
 
-let get_html_report () =
-  get_24h_stats () >>= fun (stats, stats2) ->
-  return (make_html_report stats stats2)
+let default_period = 86400.
 
-let get_text_report () =
-  get_24h_stats () >>= fun (stats, stats2) ->
+let get_html_report ?(period = default_period) () =
+  get_stats period >>= fun (stats, stats2) ->
+  return (make_html_report period stats stats2)
+
+let get_text_report ?(period = default_period) () =
+  get_stats period >>= fun (stats, stats2) ->
   return (make_text_report stats stats2)
 
-let print_text_report () =
-  get_text_report () >>= fun report ->
+let print_text_report ?period () =
+  get_text_report ?period () >>= fun report ->
   print_string report;
   return ()
 
-let send_daily_report () =
+let send_daily_report ?period () =
   Lat_acc.cleanup () >>= fun () ->
-  get_html_report () >>= fun (subject, html_body) ->
+  get_html_report ?period () >>= fun (subject, html_body) ->
   let alerts_addr =
     let conf = Conf.get () in
     Email.of_string conf.Conf_t.developer_email
