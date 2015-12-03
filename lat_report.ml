@@ -100,7 +100,7 @@ let send_daily_report ?period () =
     ~from:alerts_addr
     [alerts_addr]
     subject
-    html_body
+    (`Html html_body)
 
 let main ~offset =
   Cmdline.parse_options ~offset [];
